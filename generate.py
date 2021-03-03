@@ -3,6 +3,7 @@ import argparse
 import itertools
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
+import pandas as pd
 
 
 class RecorderCallback(tf.keras.callbacks.Callback):
@@ -18,6 +19,10 @@ class RecorderCallback(tf.keras.callbacks.Callback):
         logs.update(self.config)
         self.records.append(logs)
         print(logs)
+
+    def save(self):
+        filepath = os.path.join(self.recording_dir, 'index.csv')
+        pd.DataFrame(self.records).to_csv(filepath)
 
 
 def generate_configs(layer_sizes, layer_counts, iterations):
@@ -68,6 +73,7 @@ def main():
         model.fit(x_train, y_train, validation_data=(x_test, y_test),
                 epochs=10, verbose=0, callbacks=[recorder])
         print(f'Trained config={config}')
+    recorder.save()
     return 0
 
 
