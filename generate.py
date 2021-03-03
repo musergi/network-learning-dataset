@@ -17,8 +17,16 @@ class RecorderCallback(tf.keras.callbacks.Callback):
         logs = logs or {}
         logs['epoch'] = epoch
         logs.update(self.config)
+        logs['network_file'] = self.save_model(epoch)
         self.records.append(logs)
         print(logs)
+
+
+    def save_model(self, epoch):
+        network_id = self.config['network_id']
+        filename = f'{network_id}_{epoch}.tf'
+        self.model.save(os.path.join(self.recording_dir, filename))
+        return filename
 
     def save(self):
         filepath = os.path.join(self.recording_dir, 'index.csv')
@@ -59,6 +67,7 @@ def main():
     parser.add_argument('--layer_count_start', type=int, required=True)
     parser.add_argument('--layer_count_stop', type=int, required=True)
     parser.add_argument('--layer_count_step', type=int, required=True)
+    parser.add_argument('--out_dir', required=True)
     parser.add_argument('--iterations', type=int, default=1)
     args = parser.parse_args()
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -66,7 +75,7 @@ def main():
                 args.layer_size_step))
     layer_counts = list(range(args.layer_count_start, args.layer_count_stop,
                 args.layer_count_step))
-    recorder = RecorderCallback()
+    recorder = RecorderCallback(args.out_dir)
     for config in generate_configs(layer_sizes, layer_counts, args.iterations):
         model = create_model(config)
         recorder.config = config
