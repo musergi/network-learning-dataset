@@ -1,6 +1,7 @@
 import os
 import argparse
 import itertools
+import pickle
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 import pandas as pd
@@ -47,9 +48,9 @@ def generate_configs(layer_sizes, layer_counts, iterations):
                 network_id += 1
 
 
-def create_model(config):
+def create_model(config, input_shape):
     model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Flatten(input_shape=(28, 28)))
+    model.add(tf.keras.layers.Flatten(input_shape=input_shape))
     for index in range(config['layer_count']):
         layer_size = config[f'layer{index}'] 
         model.add(tf.keras.layers.Dense(layer_size, activation='relu'))
@@ -68,16 +69,18 @@ def main():
     parser.add_argument('--layer_count_stop', type=int, required=True)
     parser.add_argument('--layer_count_step', type=int, required=True)
     parser.add_argument('--out_dir', required=True)
+    parser.add_argument('--dataset', required=True)
     parser.add_argument('--iterations', type=int, default=1)
     args = parser.parse_args()
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    with open(args.dataset, 'rb') as f:
+        (x_train, y_train), (x_test, y_test) = pickle.load(f)
     layer_sizes = list(range(args.layer_size_start, args.layer_size_stop,
                 args.layer_size_step))
     layer_counts = list(range(args.layer_count_start, args.layer_count_stop,
                 args.layer_count_step))
     recorder = RecorderCallback(args.out_dir)
     for config in generate_configs(layer_sizes, layer_counts, args.iterations):
-        model = create_model(config)
+        model = create_model(config, x_train.shape[1:])
         recorder.config = config
         model.fit(x_train, y_train, validation_data=(x_test, y_test),
                 epochs=10, verbose=0, callbacks=[recorder])
